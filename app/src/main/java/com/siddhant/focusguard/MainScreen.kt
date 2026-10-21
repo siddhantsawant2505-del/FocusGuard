@@ -1,0 +1,431 @@
+package com.siddhant.focusguard
+
+import android.content.Context
+import android.content.Intent
+import android.graphics.drawable.BitmapDrawable
+import android.provider.Settings
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
+import java.util.Locale
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreen(
+    serviceEnabled: Boolean,
+    usedMinutes: Int,
+    budgetMinutes: Int,
+    cooldownMinutes: Int,
+    isLocked: Boolean,
+    remainingLockMs: Long,
+    pendingChangeRemainingMs: Long,
+    pendingDesc: String?,
+    installedApps: List<AppItem>,
+    blockedApps: Set<String>,
+    onBudgetChange: (Int) -> Unit,
+    onCooldownChange: (Int) -> Unit,
+    onToggleApp: (String) -> Unit
+) {
+    val context = LocalContext.current
+    var isHelpExpanded by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("FocusGuard", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                StatusCard(
+                    serviceEnabled = serviceEnabled,
+                    usedMinutes = usedMinutes,
+                    budgetMinutes = budgetMinutes,
+                    isLocked = isLocked,
+                    remainingLockMs = remainingLockMs,
+                    onOpenAccessibility = { openAccessibilitySettings(context) }
+                )
+            }
+
+            item {
+                SettingsSection(
+                    currentBudget = budgetMinutes,
+                    currentCooldown = cooldownMinutes,
+                    isLocked = isLocked,
+                    pendingDesc = pendingDesc,
+                    pendingRemainingMs = pendingChangeRemainingMs,
+                    onSaveBudget = onBudgetChange,
+                    onSaveCooldown = onCooldownChange
+                )
+            }
+
+            item {
+                Button(
+                    onClick = { openAccessibilitySettings(context) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.enable_service))
+                }
+            }
+
+            item {
+                HelpCard(
+                    isExpanded = isHelpExpanded,
+                    onToggle = { isHelpExpanded = !isHelpExpanded }
+                )
+            }
+
+            item {
+                Text(
+                    text = stringResource(R.string.apps_to_limit),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                if (isLocked) {
+                    Text(
+                        text = stringResource(R.string.locked_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
+            items(installedApps, key = { it.packageName }) { app ->
+                AppPickerRow(
+                    app = app,
+                    isChecked = blockedApps.contains(app.packageName),
+                    isEnabled = !isLocked,
+                    onToggle = { onToggleApp(app.packageName) }
+                )
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun StatusCard(
+    serviceEnabled: Boolean,
+    usedMinutes: Int,
+    budgetMinutes: Int,
+    isLocked: Boolean,
+    remainingLockMs: Long,
+    onOpenAccessibility: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = !serviceEnabled, onClick = onOpenAccessibility)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(if (serviceEnabled) Color(0xFF4CAF50) else Color(0xFFF44336))
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (serviceEnabled) {
+                        stringResource(R.string.service_on)
+                    } else {
+                        stringResource(R.string.service_off)
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (serviceEnabled) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFFF44336),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Text(
+                text = stringResource(R.string.used_ratio, usedMinutes, budgetMinutes),
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            val progress = if (budgetMinutes > 0) {
+                (usedMinutes.toFloat() / budgetMinutes.toFloat()).coerceIn(0f, 1f)
+            } else 0f
+
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+            )
+
+            if (isLocked) {
+                val totalSec = (remainingLockMs / 1000L).coerceAtLeast(0L)
+                val mm = totalSec / 60L
+                val ss = totalSec % 60L
+                val timeStr = String.format(Locale.getDefault(), "%02d:%02d", mm, ss)
+                Text(
+                    text = stringResource(R.string.locked_until, timeStr),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsSection(
+    currentBudget: Int,
+    currentCooldown: Int,
+    isLocked: Boolean,
+    pendingDesc: String?,
+    pendingRemainingMs: Long,
+    onSaveBudget: (Int) -> Unit,
+    onSaveCooldown: (Int) -> Unit
+) {
+    var budgetText by remember(currentBudget) { mutableStateOf(currentBudget.toString()) }
+    var cooldownText by remember(currentCooldown) { mutableStateOf(currentCooldown.toString()) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Configuration",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = budgetText,
+                    onValueChange = { input ->
+                        budgetText = input.filter { it.isDigit() }
+                        budgetText.toIntOrNull()?.let {
+                            if (it in Config.MIN_SETTING_MIN..Config.MAX_SETTING_MIN) {
+                                onSaveBudget(it)
+                            }
+                        }
+                    },
+                    label = { Text(stringResource(R.string.budget_label)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    enabled = !isLocked,
+                    modifier = Modifier.weight(1f)
+                )
+
+                OutlinedTextField(
+                    value = cooldownText,
+                    onValueChange = { input ->
+                        cooldownText = input.filter { it.isDigit() }
+                        cooldownText.toIntOrNull()?.let {
+                            if (it in Config.MIN_SETTING_MIN..Config.MAX_SETTING_MIN) {
+                                onSaveCooldown(it)
+                            }
+                        }
+                    },
+                    label = { Text(stringResource(R.string.lock_label)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    enabled = !isLocked,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            if (pendingDesc != null && pendingRemainingMs > 0L) {
+                val totalSec = (pendingRemainingMs / 1000L).coerceAtLeast(0L)
+                val mm = totalSec / 60L
+                val ss = totalSec % 60L
+                val timeStr = String.format(Locale.getDefault(), "%02d:%02d", mm, ss)
+                Text(
+                    text = "${stringResource(R.string.pending_change, timeStr)} ($pendingDesc)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HelpCard(
+    isExpanded: Boolean,
+    onToggle: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.help_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(onClick = onToggle) {
+                    Text(if (isExpanded) "Hide" else "Show")
+                }
+            }
+
+            AnimatedVisibility(visible = isExpanded) {
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    Text(
+                        text = stringResource(R.string.help_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AppPickerRow(
+    app: AppItem,
+    isChecked: Boolean,
+    isEnabled: Boolean,
+    onToggle: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(enabled = isEnabled, onClick = onToggle)
+            .padding(vertical = 8.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (app.icon != null) {
+            val bitmap = remember(app.icon) {
+                try {
+                    (app.icon as? BitmapDrawable)?.bitmap ?: app.icon.toBitmap(96, 96)
+                } catch (_: Exception) {
+                    null
+                }
+            }
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = app.label,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+            } else {
+                Spacer(modifier = Modifier.size(40.dp))
+            }
+        } else {
+            Spacer(modifier = Modifier.size(40.dp))
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = app.label,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = app.packageName,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Checkbox(
+            checked = isChecked,
+            onCheckedChange = { onToggle() },
+            enabled = isEnabled
+        )
+    }
+}
+
+private fun openAccessibilitySettings(context: Context) {
+    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+}

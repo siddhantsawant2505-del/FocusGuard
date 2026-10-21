@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">FocusGuard</string>
+    <string name="a11y_desc">Limits screen time in selected apps by enforcing a cooldown period once your budget is reached.</string>
+    <string name="time_up">Time\'s up</string>
+    <string name="unlocks_in">Unlocks in %s</string>
+    <string name="service_on">Service ON</string>
+    <string name="service_off">Service OFF — tap to enable</string>
+    <string name="used_ratio">Used %1$d / %2$d min</string>
+    <string name="locked_until">Locked — unlocks in %s</string>
+    <string name="pending_change">Pending change applies in %s</string>
+    <string name="budget_label">Budget (minutes)</string>
+    <string name="lock_label">Lock duration (minutes)</string>
+    <string name="enable_service">Enable accessibility service</string>
+    <string name="apps_to_limit">Apps to limit</string>
+    <string name="help_title">Setup &amp; Background Guidance</string>
+    <string name="help_body">To ensure FocusGuard functions reliably without interruption:\n\n• Accessibility: Enable FocusGuard in Settings → Accessibility. If greyed out on Android 13+, open FocusGuard App Info → three dots (top-right) → Allow restricted settings.\n• Battery: Set FocusGuard battery usage to "Unrestricted" in App Info.\n• Autostart (Xiaomi / Poco / Oppo / Vivo): Allow Autostart and background activity in device settings.\n• Xiaomi Pop-up Windows: In FocusGuard App Info → Other permissions → Enable "Display pop-up windows while running in the background".</string>
+    <string name="locked_warning">Controls disabled while locked</string>
+    <string name="invalid_input">Enter a value between 1 and 600</string>
+</resources>
