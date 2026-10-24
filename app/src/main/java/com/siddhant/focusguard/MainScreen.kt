@@ -69,6 +69,7 @@ fun MainScreen(
     pendingDesc: String?,
     installedApps: List<AppItem>,
     blockedApps: Set<String>,
+    usageHistory: List<UsageDaily>,
     onBudgetChange: (Int) -> Unit,
     onCooldownChange: (Int) -> Unit,
     onToggleApp: (String) -> Unit
@@ -154,6 +155,13 @@ fun MainScreen(
                     isChecked = blockedApps.contains(app.packageName),
                     isEnabled = !isLocked,
                     onToggle = { onToggleApp(app.packageName) }
+                )
+            }
+
+            item {
+                UsageHistoryCard(
+                    usageList = usageHistory,
+                    installedApps = installedApps
                 )
             }
 
@@ -420,6 +428,122 @@ fun AppPickerRow(
             onCheckedChange = { onToggle() },
             enabled = isEnabled
         )
+    }
+}
+
+@Composable
+fun UsageHistoryCard(
+    usageList: List<UsageDaily>,
+    installedApps: List<AppItem>
+) {
+    val appMap = remember(installedApps) { installedApps.associateBy({ it.packageName }, { it.label }) }
+    val today = remember { java.time.LocalDate.now().toEpochDay() }
+    val grouped = remember(usageList) { usageList.groupBy { it.epochDay } }
+    var expandedDay by remember { mutableStateOf<Long?>(null) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Usage History (Last 7 Days)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            if (grouped.isEmpty()) {
+                Text(
+                    text = "No usage recorded yet.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                val maxDayDuration = (grouped.values.maxOfOrNull { dayItems -> dayItems.sumOf { it.durationMs } } ?: 1L).coerceAtLeast(1L)
+
+                for (dayOffset in 0..6) {
+                    val epochDay = today - dayOffset
+                    val dayItems = grouped[epochDay] ?: emptyList()
+                    val totalMs = dayItems.sumOf { it.durationMs }
+                    val totalMins = (totalMs / 60_000L).toInt()
+
+                    val dayLabel = when (dayOffset) {
+                        0 -> "Today"
+                        1 -> "Yesterday"
+                        else -> java.time.LocalDate.ofEpochDay(epochDay).format(java.time.format.DateTimeFormatter.ofPattern("EEE, MMM d"))
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable(enabled = dayItems.isNotEmpty()) {
+                                expandedDay = if (expandedDay == epochDay) null else epochDay
+                            }
+                            .padding(vertical = 4.dp, horizontal = 2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = dayLabel,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "$totalMins min",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        val barRatio = (totalMs.toFloat() / maxDayDuration.toFloat()).coerceIn(0f, 1f)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(barRatio.coerceAtLeast(0.02f))
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+
+                        AnimatedVisibility(visible = expandedDay == epochDay && dayItems.isNotEmpty()) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 6.dp, start = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                for (item in dayItems) {
+                                    val appName = appMap[item.pkg] ?: item.pkg
+                                    val itemMin = (item.durationMs / 60_000L).toInt()
+                                    val itemSec = ((item.durationMs % 60_000L) / 1000L).toInt()
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "• $appName",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = if (itemMin > 0) "$itemMin min" else "${itemSec}s",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

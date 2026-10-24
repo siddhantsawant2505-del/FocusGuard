@@ -57,11 +57,13 @@ Legend: `[x]` done in Phase 1 code, `[ ]` to do. Verify the `[x]` items against 
 
 ## Phase 3 — Usage log (M3)
 
-- [ ] **T3.1 Add Room dependency** (approved for this phase only) with KSP; `UsageDaily` entity, DAO, database singleton.
-  - Files: `app/build.gradle(.kts)`, new `UsageDb.kt`.
-- [ ] **T3.2 `UsageLogger`.** Batches per-package deltas and flushes in the 5-second persist step on a background dispatcher. Prune rows older than 30 days at service start.
+- [x] **T3.1 Add usage log persistence**; `UsageDaily` model, DAO, `UsageDb` SQLite helper singleton.
+  - Files: `UsageDb.kt`.
+- [x] **T3.2 `UsageLogger`.** Batches per-package deltas and flushes in the 5-second persist step on a background dispatcher. Prune rows older than 30 days at service start.
+  - Files: `UsageLogger.kt`, wired to `BlockerService.kt` and `LimiterEngine.kt`.
   - AC: TC-21 (log matches stopwatch within ±1 min over a session).
-- [ ] **T3.3 History UI.** "Last 7 days" list or simple bar chart in `MainActivity` with per-app breakdown on tap. No chart library; draw with Compose `Canvas` or simple bars.
+- [x] **T3.3 History UI.** "Last 7 days" list in `MainActivity` with per-app breakdown on tap. No chart library; simple bars and animated per-app breakdown.
+  - Files: `MainScreen.kt`, `MainActivity.kt`.
   - AC: TC-22.
 
 ## Phase 4 — YouTube Shorts-only (M4)

@@ -16,6 +16,9 @@ class LimiterEngine(
     var trackedPkg: String? = null
         private set
 
+    var onUsageDelta: ((pkg: String, deltaMs: Long) -> Unit)? = null
+    var onPersist: (() -> Unit)? = null
+
     private var lastTickElapsed: Long = 0L
     private var lastPersistElapsed: Long = 0L
 
@@ -137,6 +140,7 @@ class LimiterEngine(
                 isTracking = false
                 trackedPkg = null
                 store.persist(immediate = true)
+                onPersist?.invoke()
             }
             return Decision.Allow
         }
@@ -187,6 +191,7 @@ class LimiterEngine(
         }
 
         store.usedMs += delta
+        trackedPkg?.let { onUsageDelta?.invoke(it, delta) }
 
         val budgetMs = store.budgetMin * 60_000L
         if (store.usedMs >= budgetMs) {
@@ -197,6 +202,7 @@ class LimiterEngine(
         if (now - lastPersistElapsed >= Config.PERSIST_INTERVAL_MS) {
             lastPersistElapsed = now
             store.persist(immediate = false)
+            onPersist?.invoke()
         }
 
         return Decision.Tracking
@@ -212,9 +218,11 @@ class LimiterEngine(
                 delta = Config.CLAMPED_DELTA_MS
             }
             store.usedMs += delta
+            trackedPkg?.let { onUsageDelta?.invoke(it, delta) }
             isTracking = false
             trackedPkg = null
             store.persist(immediate = true)
+            onPersist?.invoke()
         }
     }
 
@@ -226,5 +234,6 @@ class LimiterEngine(
         store.lockBootCount = clock.bootCount()
         store.lockedUntilWall = store.lockStartWall + (store.cooldownMin * 60_000L)
         store.persist(immediate = true)
+        onPersist?.invoke()
     }
 }

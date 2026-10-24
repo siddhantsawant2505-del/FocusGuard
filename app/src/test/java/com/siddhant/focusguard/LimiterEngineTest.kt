@@ -330,4 +330,29 @@ class LimiterEngineTest {
         assertEquals(withoutYouTube, store.blocked)
         assertNull(store.pendingBlocked)
     }
+
+    @Test
+    fun notifiesUsageDeltaAndPersistOnTicks() {
+        var recordedPkg: String? = null
+        var totalRecordedDelta = 0L
+        var persistNotified = false
+
+        engine.onUsageDelta = { pkg, delta ->
+            recordedPkg = pkg
+            totalRecordedDelta += delta
+        }
+        engine.onPersist = {
+            persistNotified = true
+        }
+
+        engine.onForegroundChanged("com.google.android.youtube")
+        for (i in 1..5) {
+            clock.advance(1000L)
+            engine.onTick()
+        }
+
+        assertEquals("com.google.android.youtube", recordedPkg)
+        assertEquals(5000L, totalRecordedDelta)
+        assertTrue(persistNotified)
+    }
 }

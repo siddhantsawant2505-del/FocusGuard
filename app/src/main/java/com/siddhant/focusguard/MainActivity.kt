@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
                 var pendingRemainingMs by remember { mutableLongStateOf(0L) }
                 var pendingDesc by remember { mutableStateOf<String?>(null) }
                 var blockedApps by remember { mutableStateOf(store.blocked) }
+                var usageHistory by remember { mutableStateOf<List<UsageDaily>>(emptyList()) }
 
                 fun refreshState() {
                     store.refresh()
@@ -58,6 +59,7 @@ class MainActivity : ComponentActivity() {
                     isLocked = engine.isLocked()
                     remainingLockMs = engine.remainingLockMs()
                     blockedApps = store.blocked
+                    usageHistory = UsageDb.getInstance(this@MainActivity).getUsageForLastNDays(7)
 
                     if (store.pendingAppliedAtWall > 0L) {
                         val remaining = store.pendingAppliedAtWall - clock.wallTime()
@@ -97,6 +99,7 @@ class MainActivity : ComponentActivity() {
                     pendingDesc = pendingDesc,
                     installedApps = installedApps,
                     blockedApps = blockedApps,
+                    usageHistory = usageHistory,
                     onBudgetChange = { newBudget ->
                         if (engine.proposeBudget(newBudget)) {
                             refreshState()

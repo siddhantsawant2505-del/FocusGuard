@@ -17,6 +17,7 @@ class BlockerService : AccessibilityService() {
     private lateinit var clock: Clock
     private lateinit var store: Store
     private lateinit var engine: LimiterEngine
+    private lateinit var usageLogger: UsageLogger
     private val handler = Handler(Looper.getMainLooper())
 
     private var imePackages: Set<String> = emptySet()
@@ -56,6 +57,14 @@ class BlockerService : AccessibilityService() {
         clock = SystemClockImpl(applicationContext)
         store = Store(applicationContext)
         engine = LimiterEngine(clock, store)
+        usageLogger = UsageLogger(applicationContext)
+
+        engine.onUsageDelta = { pkg, deltaMs ->
+            usageLogger.addDelta(pkg, deltaMs)
+        }
+        engine.onPersist = {
+            usageLogger.flush()
+        }
 
         refreshImePackages()
         registerScreenReceiver()
@@ -161,6 +170,9 @@ class BlockerService : AccessibilityService() {
         }
         if (::store.isInitialized) {
             store.persist(immediate = true)
+        }
+        if (::usageLogger.isInitialized) {
+            usageLogger.flush()
         }
         Log.d(Config.LOG_TAG, "BlockerService destroyed")
     }
