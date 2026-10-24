@@ -46,6 +46,8 @@ class MainActivity : ComponentActivity() {
                 var pendingDesc by remember { mutableStateOf<String?>(null) }
                 var blockedApps by remember { mutableStateOf(store.blocked) }
                 var usageHistory by remember { mutableStateOf<List<UsageDaily>>(emptyList()) }
+                var shortsOnlyYouTube by remember { mutableStateOf(store.shortsOnlyYouTube) }
+                var blockedDomains by remember { mutableStateOf(store.blockedDomains) }
 
                 fun refreshState() {
                     store.refresh()
@@ -60,6 +62,8 @@ class MainActivity : ComponentActivity() {
                     remainingLockMs = engine.remainingLockMs()
                     blockedApps = store.blocked
                     usageHistory = UsageDb.getInstance(this@MainActivity).getUsageForLastNDays(7)
+                    shortsOnlyYouTube = store.shortsOnlyYouTube
+                    blockedDomains = store.blockedDomains
 
                     if (store.pendingAppliedAtWall > 0L) {
                         val remaining = store.pendingAppliedAtWall - clock.wallTime()
@@ -100,6 +104,8 @@ class MainActivity : ComponentActivity() {
                     installedApps = installedApps,
                     blockedApps = blockedApps,
                     usageHistory = usageHistory,
+                    shortsOnlyYouTube = shortsOnlyYouTube,
+                    blockedDomains = blockedDomains,
                     onBudgetChange = { newBudget ->
                         if (engine.proposeBudget(newBudget)) {
                             refreshState()
@@ -120,6 +126,21 @@ class MainActivity : ComponentActivity() {
                         if (engine.proposeBlocked(newBlocked)) {
                             refreshState()
                         }
+                    },
+                    onToggleShortsOnly = { enabled ->
+                        store.shortsOnlyYouTube = enabled
+                        store.persist(immediate = true)
+                        refreshState()
+                    },
+                    onAddDomain = { domain ->
+                        store.blockedDomains = store.blockedDomains + domain
+                        store.persist(immediate = true)
+                        refreshState()
+                    },
+                    onRemoveDomain = { domain ->
+                        store.blockedDomains = store.blockedDomains - domain
+                        store.persist(immediate = true)
+                        refreshState()
                     }
                 )
             }

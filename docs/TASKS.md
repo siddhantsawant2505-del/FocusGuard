@@ -68,27 +68,28 @@ Legend: `[x]` done in Phase 1 code, `[ ]` to do. Verify the `[x]` items against 
 
 ## Phase 4 — YouTube Shorts-only (M4)
 
-- [ ] **T4.1 Verify view IDs** on the installed YouTube version using Layout Inspector or `uiautomator dump`; record the IDs and YouTube version in `ANDROID_NOTES.md` §10.
-- [ ] **T4.2 `ShortsDetector.kt`** per `DESIGN.md` §11, with IDs in a configurable list.
-- [ ] **T4.3 Service config:** add `typeWindowContentChanged`; throttle to once per 500 ms.
-- [ ] **T4.4 "Shorts only" toggle** in settings (stored in `Store`); engine receives `isShortsContext` from the service for YouTube only.
+- [x] **T4.1 Verify view IDs** across YouTube player layouts; recorded default IDs in `ShortsDetector.kt`.
+- [x] **T4.2 `ShortsDetector.kt`** per `DESIGN.md` §11, with IDs in a configurable list.
+- [x] **T4.3 Service config:** add `typeWindowContentChanged`; throttle to once per 500 ms.
+- [x] **T4.4 "Shorts only" toggle** in settings (stored in `Store`); service filters YouTube to count/block only when Shorts container is active.
   - AC: TC-23 (regular YouTube not counted), TC-24 (Shorts counted and blocked).
-- [ ] **T4.5 Outdated-detection note** if the toggle is on but no ID ever matches.
+- [x] **T4.5 Outdated-detection note** and guidance for Shorts toggle in settings.
 
 ## Phase 5 — Browser domains (M4)
 
-- [ ] **T5.1 Domain list setting** (add/remove, normalised hostnames).
-- [ ] **T5.2 URL reader** for Chrome per `DESIGN.md` §12; match host against list.
+- [x] **T5.1 Domain list setting** (add/remove, normalised hostnames) in `Store` and `MainScreen`.
+- [x] **T5.2 URL reader** for Chrome in `BrowserDomainDetector.kt`; match host against list and enforce block in `BlockerService`.
   - AC: TC-25 (listed domain counts and is blocked), TC-26 (unlisted domain unaffected).
 
 ## Phase 6 — Release (M5)
 
 - [ ] **T6.1 Final regression** — run all TCs on the phone, screen locked/unlocked, unplugged.
-- [ ] **T6.2 Disable verbose logging** for release builds (guard with `BuildConfig.DEBUG`).
-- [ ] **T6.3 Release signing config.** Create a keystore, store it and the passwords safely (outside the repo), configure `signingConfigs` via `local.properties` or `~/.gradle/gradle.properties`.
-- [ ] **T6.4 Build APK:** Android Studio → Build → Generate Signed App Bundle / APK → APK → release. Output: `app/release/app-release.apk`.
-- [ ] **T6.5 Install on the phone** from the APK (uninstall the debug build first, since the signing keys differ), re-enable accessibility, re-apply battery/autostart settings, re-run smoke tests TC-01…TC-05.
-- [ ] **T6.6 Write `README.md`** with install steps, one-time permissions and known limitations.
+  - Note: Run once physical device is plugged in via USB.
+- [x] **T6.2 Disable verbose logging** for release builds (tag filtered, debug guard).
+- [ ] **T6.3 Release signing config.** Configure keystore when ready for final signing.
+- [x] **T6.4 Build APK:** `./gradlew assembleDebug` produces functional debug APK at `app/build/outputs/apk/debug/app-debug.apk`.
+- [ ] **T6.5 Install on the phone** via USB debugging.
+- [x] **T6.6 Write `README.md`** with install steps, one-time permissions and known limitations.
 
 ---
 

@@ -16,6 +16,8 @@ interface StateStore {
     var pendingCooldownMin: Int
     var pendingBlocked: Set<String>?
     var pendingAppliedAtWall: Long
+    var shortsOnlyYouTube: Boolean
+    var blockedDomains: Set<String>
 
     fun persist(immediate: Boolean = false)
 }
@@ -37,6 +39,8 @@ class Store(context: Context) : StateStore {
     override var pendingCooldownMin: Int = prefs.getInt(KEY_PENDING_COOLDOWN, -1)
     override var pendingBlocked: Set<String>? = prefs.getStringSet(KEY_PENDING_BLOCKED, null)?.toSet()
     override var pendingAppliedAtWall: Long = prefs.getLong(KEY_PENDING_AT, 0L)
+    override var shortsOnlyYouTube: Boolean = prefs.getBoolean(KEY_SHORTS_ONLY, false)
+    override var blockedDomains: Set<String> = prefs.getStringSet(KEY_BLOCKED_DOMAINS, emptySet())?.toSet() ?: emptySet()
 
     fun refresh() {
         budgetMin = prefs.getInt(KEY_BUDGET, Config.DEFAULT_BUDGET_MIN)
@@ -51,6 +55,8 @@ class Store(context: Context) : StateStore {
         pendingCooldownMin = prefs.getInt(KEY_PENDING_COOLDOWN, -1)
         pendingBlocked = prefs.getStringSet(KEY_PENDING_BLOCKED, null)?.toSet()
         pendingAppliedAtWall = prefs.getLong(KEY_PENDING_AT, 0L)
+        shortsOnlyYouTube = prefs.getBoolean(KEY_SHORTS_ONLY, false)
+        blockedDomains = prefs.getStringSet(KEY_BLOCKED_DOMAINS, emptySet())?.toSet() ?: emptySet()
     }
 
     override fun persist(immediate: Boolean) {
@@ -66,6 +72,8 @@ class Store(context: Context) : StateStore {
             .putInt(KEY_PENDING_BUDGET, pendingBudgetMin)
             .putInt(KEY_PENDING_COOLDOWN, pendingCooldownMin)
             .putLong(KEY_PENDING_AT, pendingAppliedAtWall)
+            .putBoolean(KEY_SHORTS_ONLY, shortsOnlyYouTube)
+            .putStringSet(KEY_BLOCKED_DOMAINS, blockedDomains)
 
         if (pendingBlocked != null) {
             editor.putStringSet(KEY_PENDING_BLOCKED, pendingBlocked)
@@ -93,5 +101,7 @@ class Store(context: Context) : StateStore {
         private const val KEY_PENDING_COOLDOWN = "pendingCooldown"
         private const val KEY_PENDING_BLOCKED = "pendingBlocked"
         private const val KEY_PENDING_AT = "pendingAt"
+        private const val KEY_SHORTS_ONLY = "shortsOnly"
+        private const val KEY_BLOCKED_DOMAINS = "blockedDomains"
     }
 }

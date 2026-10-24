@@ -22,6 +22,7 @@ class BlockerService : AccessibilityService() {
 
     private var imePackages: Set<String> = emptySet()
     private var isReceiverRegistered = false
+    private var lastContentCheckTime: Long = 0L
 
     private val tickRunnable = object : Runnable {
         override fun run() {
@@ -79,7 +80,12 @@ class BlockerService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+        if (event == null) return
+
+        val eventType = event.eventType
+        if (eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+        ) {
             return
         }
 
@@ -90,7 +96,54 @@ class BlockerService : AccessibilityService() {
             return
         }
 
-        handlePackage(pkg)
+        // Throttle content changed events to avoid excessive tree inspection
+        if (eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (now - lastContentCheckTime < 500L) {
+                return
+            }
+            lastContentCheckTime = now
+        }
+
+        processForegroundState(pkg)
+    }
+
+    private fun processForegroundState(pkg: String) {
+        if (!::engine.isInitialized) return
+
+        when (pkg) {
+            ShortsDetector.YOUTUBE_PKG -> {
+                if (store.shortsOnlyYouTube) {
+                    val root = try { rootInActiveWindow } catch (_: Exception) { null }
+                    val isShorts = ShortsDetector.isShortsVisible(root)
+                    if (isShorts) {
+                        handlePackage(pkg)
+                    } else {
+                        handlePackage(null)
+                    }
+                } else {
+                    handlePackage(pkg)
+                }
+            }
+            BrowserDomainDetector.CHROME_PKG -> {
+                val root = try { rootInActiveWindow } catch (_: Exception) { null }
+                val url = BrowserDomainDetector.extractChromeUrl(root)
+                val isBlockedDomain = BrowserDomainDetector.isDomainBlocked(url, store.blockedDomains)
+
+                if (isBlockedDomain) {
+                    // Listed domain counts and blocks
+                    handlePackage(pkg)
+                } else if (store.blocked.contains(pkg)) {
+                    // Full Chrome is in app blocklist
+                    handlePackage(pkg)
+                } else {
+                    handlePackage(null)
+                }
+            }
+            else -> {
+                handlePackage(pkg)
+            }
+        }
     }
 
     fun handlePackage(pkg: String?) {

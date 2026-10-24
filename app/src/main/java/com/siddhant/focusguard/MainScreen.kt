@@ -34,6 +34,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -70,9 +71,14 @@ fun MainScreen(
     installedApps: List<AppItem>,
     blockedApps: Set<String>,
     usageHistory: List<UsageDaily>,
+    shortsOnlyYouTube: Boolean,
+    blockedDomains: Set<String>,
     onBudgetChange: (Int) -> Unit,
     onCooldownChange: (Int) -> Unit,
-    onToggleApp: (String) -> Unit
+    onToggleApp: (String) -> Unit,
+    onToggleShortsOnly: (Boolean) -> Unit,
+    onAddDomain: (String) -> Unit,
+    onRemoveDomain: (String) -> Unit
 ) {
     val context = LocalContext.current
     var isHelpExpanded by remember { mutableStateOf(false) }
@@ -114,6 +120,17 @@ fun MainScreen(
                     pendingRemainingMs = pendingChangeRemainingMs,
                     onSaveBudget = onBudgetChange,
                     onSaveCooldown = onCooldownChange
+                )
+            }
+
+            item {
+                AdvancedFilteringCard(
+                    shortsOnlyYouTube = shortsOnlyYouTube,
+                    blockedDomains = blockedDomains,
+                    isLocked = isLocked,
+                    onToggleShortsOnly = onToggleShortsOnly,
+                    onAddDomain = onAddDomain,
+                    onRemoveDomain = onRemoveDomain
                 )
             }
 
@@ -539,6 +556,124 @@ fun UsageHistoryCard(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AdvancedFilteringCard(
+    shortsOnlyYouTube: Boolean,
+    blockedDomains: Set<String>,
+    isLocked: Boolean,
+    onToggleShortsOnly: (Boolean) -> Unit,
+    onAddDomain: (String) -> Unit,
+    onRemoveDomain: (String) -> Unit
+) {
+    var domainInput by remember { mutableStateOf("") }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                text = "Advanced Targeting",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "YouTube Shorts Only",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Count and block only when Shorts player is active; regular videos remain accessible.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Switch(
+                    checked = shortsOnlyYouTube,
+                    onCheckedChange = onToggleShortsOnly,
+                    enabled = !isLocked
+                )
+            }
+
+            HorizontalDivider()
+
+            Text(
+                text = "Blocked Browser Domains (Chrome)",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = domainInput,
+                    onValueChange = { domainInput = it },
+                    placeholder = { Text("e.g. mangadex.org") },
+                    singleLine = true,
+                    enabled = !isLocked,
+                    modifier = Modifier.weight(1f)
+                )
+                Button(
+                    onClick = {
+                        val trimmed = domainInput.trim().lowercase().removePrefix("https://").removePrefix("http://")
+                        if (trimmed.isNotBlank()) {
+                            onAddDomain(trimmed)
+                            domainInput = ""
+                        }
+                    },
+                    enabled = !isLocked && domainInput.isNotBlank()
+                ) {
+                    Text("Add")
+                }
+            }
+
+            if (blockedDomains.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (domain in blockedDomains) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = domain,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "✕",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier
+                                    .clickable(enabled = !isLocked) { onRemoveDomain(domain) }
+                                    .padding(4.dp)
+                            )
                         }
                     }
                 }
