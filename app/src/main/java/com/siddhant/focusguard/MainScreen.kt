@@ -29,6 +29,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -82,6 +84,18 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     var isHelpExpanded by remember { mutableStateOf(false) }
+    var appSearchQuery by remember { mutableStateOf("") }
+    var filterOnlySelected by remember { mutableStateOf(false) }
+
+    val filteredApps = remember(installedApps, appSearchQuery, filterOnlySelected, blockedApps) {
+        installedApps.filter { app ->
+            val matchesQuery = appSearchQuery.isBlank() ||
+                app.label.contains(appSearchQuery, ignoreCase = true) ||
+                app.packageName.contains(appSearchQuery, ignoreCase = true)
+            val matchesSelection = !filterOnlySelected || blockedApps.contains(app.packageName)
+            matchesQuery && matchesSelection
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -151,12 +165,35 @@ fun MainScreen(
             }
 
             item {
-                Text(
-                    text = stringResource(R.string.apps_to_limit),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${stringResource(R.string.apps_to_limit)} (${blockedApps.size} selected)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    FilterChip(
+                        selected = filterOnlySelected,
+                        onClick = { filterOnlySelected = !filterOnlySelected },
+                        label = { Text("Selected only") }
+                    )
+                }
+
+                OutlinedTextField(
+                    value = appSearchQuery,
+                    onValueChange = { appSearchQuery = it },
+                    placeholder = { Text("Search installed apps...") },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
                 )
+
                 if (isLocked) {
                     Text(
                         text = stringResource(R.string.locked_warning),
@@ -166,7 +203,7 @@ fun MainScreen(
                 }
             }
 
-            items(installedApps, key = { it.packageName }) { app ->
+            items(filteredApps, key = { it.packageName }) { app ->
                 AppPickerRow(
                     app = app,
                     isChecked = blockedApps.contains(app.packageName),
@@ -328,6 +365,26 @@ fun SettingsSection(
                     enabled = !isLocked,
                     modifier = Modifier.weight(1f)
                 )
+            }
+
+            Text(
+                text = "Quick Budget Presets",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf(15, 30, 45, 60).forEach { preset ->
+                    FilterChip(
+                        selected = currentBudget == preset,
+                        onClick = { onSaveBudget(preset) },
+                        label = { Text("${preset}m") },
+                        enabled = !isLocked
+                    )
+                }
             }
 
             if (pendingDesc != null && pendingRemainingMs > 0L) {

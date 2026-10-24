@@ -77,9 +77,32 @@ class BlockActivity : ComponentActivity() {
             gravity = Gravity.CENTER
         }
 
+        val homeButton = android.widget.Button(this).apply {
+            text = "Return to Home"
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.parseColor("#37474F"))
+            setPadding(48, 24, 48, 24)
+            val params = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 64
+            }
+            layoutParams = params
+            setOnClickListener {
+                val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_HOME)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                startActivity(homeIntent)
+                finish()
+            }
+        }
+
         root.addView(titleText)
         root.addView(countdownText)
         root.addView(subtitleText)
+        root.addView(homeButton)
 
         setContentView(root)
     }
