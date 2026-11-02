@@ -3,17 +3,57 @@
     <string name="a11y_desc">Limits screen time in selected apps by enforcing a cooldown period once your budget is reached.</string>
     <string name="time_up">Time\'s up</string>
     <string name="unlocks_in">Unlocks in %s</string>
-    <string name="service_on">Service ON</string>
-    <string name="service_off">Service OFF — tap to enable</string>
-    <string name="used_ratio">Used %1$d / %2$d min</string>
-    <string name="locked_until">Locked — unlocks in %s</string>
-    <string name="pending_change">Pending change applies in %s</string>
-    <string name="budget_label">Budget (minutes)</string>
-    <string name="lock_label">Lock duration (minutes)</string>
-    <string name="enable_service">Enable accessibility service</string>
-    <string name="apps_to_limit">Apps to limit</string>
-    <string name="help_title">Setup &amp; Background Guidance</string>
+    <string name="service_on">Shield Active</string>
+    <string name="service_off">Service Disabled • Tap to Setup</string>
+    <string name="used_ratio">%1$d of %2$d min used</string>
+    <string name="locked_until">Cooldown Active • Unlocks in %s</string>
+    <string name="pending_change">Change takes effect in %s</string>
+    <string name="budget_label">Daily Budget (min)</string>
+    <string name="lock_label">Cooldown Lock (min)</string>
+    <string name="enable_service">Grant Accessibility Permission</string>
+    <string name="apps_to_limit">Restricted Apps</string>
+    <string name="help_title">Setup &amp; Optimization Guide</string>
     <string name="help_body">To ensure FocusGuard functions reliably without interruption:\n\n• Accessibility: Enable FocusGuard in Settings → Accessibility. If greyed out on Android 13+, open FocusGuard App Info → three dots (top-right) → Allow restricted settings.\n• Battery: Set FocusGuard battery usage to "Unrestricted" in App Info.\n• Autostart (Xiaomi / Poco / Oppo / Vivo): Allow Autostart and background activity in device settings.\n• Xiaomi Pop-up Windows: In FocusGuard App Info → Other permissions → Enable "Display pop-up windows while running in the background".</string>
-    <string name="locked_warning">Controls disabled while locked</string>
+    <string name="locked_warning">Settings locked during cooldown to protect your focus</string>
     <string name="invalid_input">Enter a value between 1 and 600</string>
+
+    <!-- Navigation & Tabs -->
+    <string name="tab_apps">Shielded Apps</string>
+    <string name="tab_limits">Limits &amp; Rules</string>
+    <string name="tab_insights">Insights</string>
+    <string name="tab_guide">Guide</string>
+
+    <!-- App Search & Filter -->
+    <string name="search_apps_hint">Search apps by name...</string>
+    <string name="filter_all">All</string>
+    <string name="filter_protected">Protected</string>
+    <string name="filter_unprotected">Unprotected</string>
+    <string name="no_apps_found">No apps match your search</string>
+
+    <!-- Stats & Hero -->
+    <string name="remaining_time">Remaining</string>
+    <string name="budget_stat">Budget</string>
+    <string name="cooldown_stat">Cooldown</string>
+    <string name="shielded_count">%d Apps</string>
+    <string name="focus_guard_tagline">Digital Wellness &amp; Habit Firewall</string>
+
+    <!-- Insights -->
+    <string name="insights_title">Weekly Usage History</string>
+    <string name="insights_subtitle">Track your distracted screen time over the last 7 days</string>
+    <string name="no_usage_recorded">No usage recorded yet. Open protected apps to track focus.</string>
+    <string name="total_weekly_focus">Past 7 Days Distraction Time</string>
+
+    <!-- Rules & Targeting -->
+    <string name="quick_presets_title">Quick Budget Presets</string>
+    <string name="shorts_title">YouTube Shorts Targeting</string>
+    <string name="shorts_desc">Only track and lock when Shorts player is active. Long-form video learning remains accessible.</string>
+    <string name="browser_domain_title">Distracting Web Domains</string>
+    <string name="browser_domain_desc">Block mobile browser sessions for specific manga, reader, or social websites.</string>
+    <string name="add_domain_hint">e.g. mangadex.org, reddit.com</string>
+    <string name="add_button">Add</string>
+
+    <!-- Block Activity (Lockout screen) -->
+    <string name="take_a_pause">Focus in Progress</string>
+    <string name="block_motivational">Take a deep breath. Step away, stretch, or return to what matters.</string>
+    <string name="return_to_home">Return to Home Screen</string>
 </resources>

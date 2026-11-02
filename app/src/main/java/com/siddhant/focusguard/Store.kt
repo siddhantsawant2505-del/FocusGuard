@@ -42,10 +42,22 @@ class Store(context: Context) : StateStore {
     override var shortsOnlyYouTube: Boolean = prefs.getBoolean(KEY_SHORTS_ONLY, false)
     override var blockedDomains: Set<String> = prefs.getStringSet(KEY_BLOCKED_DOMAINS, emptySet())?.toSet() ?: emptySet()
 
-    fun refresh() {
+    var isTrackingActive: Boolean = false
+
+    private val prefChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        refresh(preserveUsedMs = isTrackingActive)
+    }
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(prefChangeListener)
+    }
+
+    fun refresh(preserveUsedMs: Boolean = false) {
         budgetMin = prefs.getInt(KEY_BUDGET, Config.DEFAULT_BUDGET_MIN)
         cooldownMin = prefs.getInt(KEY_COOLDOWN, Config.DEFAULT_COOLDOWN_MIN)
-        usedMs = prefs.getLong(KEY_USED, 0L)
+        if (!preserveUsedMs) {
+            usedMs = prefs.getLong(KEY_USED, 0L)
+        }
         lockedUntilWall = prefs.getLong(KEY_LOCKED_UNTIL, 0L)
         lockStartElapsed = prefs.getLong(KEY_LOCK_START_ELAPSED, 0L)
         lockStartWall = prefs.getLong(KEY_LOCK_START_WALL, 0L)

@@ -28,9 +28,6 @@ class BlockerService : AccessibilityService() {
         override fun run() {
             val decision = engine.onTick()
             handleDecision(decision)
-            if (engine.isTracking) {
-                handler.postDelayed(this, Config.TICK_INTERVAL_MS)
-            }
         }
     }
 
@@ -111,6 +108,8 @@ class BlockerService : AccessibilityService() {
     private fun processForegroundState(pkg: String) {
         if (!::engine.isInitialized) return
 
+        store.refresh(preserveUsedMs = engine.isTracking)
+
         when (pkg) {
             ShortsDetector.YOUTUBE_PKG -> {
                 if (store.shortsOnlyYouTube) {
@@ -158,6 +157,7 @@ class BlockerService : AccessibilityService() {
     }
 
     private fun handleDecision(decision: Decision) {
+        store.isTrackingActive = engine.isTracking
         when (decision) {
             is Decision.Allow -> {
                 handler.removeCallbacks(tickRunnable)
@@ -175,6 +175,7 @@ class BlockerService : AccessibilityService() {
 
     private fun kick() {
         Log.i(Config.LOG_TAG, "Enforcing block: performing HOME and starting BlockActivity")
+        AudioFocusHelper.requestExclusiveFocus(this)
         performGlobalAction(GLOBAL_ACTION_HOME)
 
         val intent = Intent(this, BlockActivity::class.java).apply {
