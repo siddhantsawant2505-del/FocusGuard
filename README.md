@@ -1,5 +1,9 @@
 # FocusGuard
 
+<p align="center">
+  <img src="assets/focusguard_logo_512.png" alt="FocusGuard Logo" width="160" />
+</p>
+
 FocusGuard is a personal-use Android application designed to curb time spent in distracting apps (such as YouTube, YouTube Shorts, and online manga/manhua readers).
 
 It operates on a **shared time budget** across all chosen apps. When the combined time budget is reached, FocusGuard sends the user to the home screen and locks access to those apps for a configured cooldown period, refreshing automatically once the cooldown concludes.
