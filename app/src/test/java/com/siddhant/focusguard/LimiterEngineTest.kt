@@ -37,7 +37,9 @@ class InMemoryStateStore(
     override var pendingBlocked: Set<String>? = null,
     override var pendingAppliedAtWall: Long = 0L,
     override var shortsOnlyYouTube: Boolean = false,
-    override var blockedDomains: Set<String> = emptySet()
+    override var blockedDomains: Set<String> = emptySet(),
+    override var hasGrantedAccessibility: Boolean = false,
+    override var dismissServiceWarning: Boolean = false
 ) : StateStore {
     var persistCount: Int = 0
 

@@ -14,6 +14,12 @@ import android.view.inputmethod.InputMethodManager
 
 class BlockerService : AccessibilityService() {
 
+    companion object {
+        @Volatile
+        var isRunning: Boolean = false
+            internal set
+    }
+
     private lateinit var clock: Clock
     private lateinit var store: Store
     private lateinit var engine: LimiterEngine
@@ -52,8 +58,11 @@ class BlockerService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        isRunning = true
         clock = SystemClockImpl(applicationContext)
         store = Store(applicationContext)
+        store.hasGrantedAccessibility = true
+        store.persist(immediate = true)
         engine = LimiterEngine(clock, store)
         usageLogger = UsageLogger(applicationContext)
 
@@ -213,6 +222,7 @@ class BlockerService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        isRunning = false
         handler.removeCallbacks(tickRunnable)
         if (isReceiverRegistered) {
             try {

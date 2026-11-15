@@ -18,6 +18,8 @@ interface StateStore {
     var pendingAppliedAtWall: Long
     var shortsOnlyYouTube: Boolean
     var blockedDomains: Set<String>
+    var hasGrantedAccessibility: Boolean
+    var dismissServiceWarning: Boolean
 
     fun persist(immediate: Boolean = false)
 }
@@ -41,6 +43,8 @@ class Store(context: Context) : StateStore {
     override var pendingAppliedAtWall: Long = prefs.getLong(KEY_PENDING_AT, 0L)
     override var shortsOnlyYouTube: Boolean = prefs.getBoolean(KEY_SHORTS_ONLY, false)
     override var blockedDomains: Set<String> = prefs.getStringSet(KEY_BLOCKED_DOMAINS, emptySet())?.toSet() ?: emptySet()
+    override var hasGrantedAccessibility: Boolean = prefs.getBoolean(KEY_HAS_GRANTED_ACCESSIBILITY, false)
+    override var dismissServiceWarning: Boolean = prefs.getBoolean(KEY_DISMISS_SERVICE_WARNING, false)
 
     var isTrackingActive: Boolean = false
 
@@ -69,6 +73,8 @@ class Store(context: Context) : StateStore {
         pendingAppliedAtWall = prefs.getLong(KEY_PENDING_AT, 0L)
         shortsOnlyYouTube = prefs.getBoolean(KEY_SHORTS_ONLY, false)
         blockedDomains = prefs.getStringSet(KEY_BLOCKED_DOMAINS, emptySet())?.toSet() ?: emptySet()
+        hasGrantedAccessibility = prefs.getBoolean(KEY_HAS_GRANTED_ACCESSIBILITY, false)
+        dismissServiceWarning = prefs.getBoolean(KEY_DISMISS_SERVICE_WARNING, false)
     }
 
     override fun persist(immediate: Boolean) {
@@ -86,6 +92,8 @@ class Store(context: Context) : StateStore {
             .putLong(KEY_PENDING_AT, pendingAppliedAtWall)
             .putBoolean(KEY_SHORTS_ONLY, shortsOnlyYouTube)
             .putStringSet(KEY_BLOCKED_DOMAINS, blockedDomains)
+            .putBoolean(KEY_HAS_GRANTED_ACCESSIBILITY, hasGrantedAccessibility)
+            .putBoolean(KEY_DISMISS_SERVICE_WARNING, dismissServiceWarning)
 
         if (pendingBlocked != null) {
             editor.putStringSet(KEY_PENDING_BLOCKED, pendingBlocked)
@@ -115,5 +123,7 @@ class Store(context: Context) : StateStore {
         private const val KEY_PENDING_AT = "pendingAt"
         private const val KEY_SHORTS_ONLY = "shortsOnly"
         private const val KEY_BLOCKED_DOMAINS = "blockedDomains"
+        private const val KEY_HAS_GRANTED_ACCESSIBILITY = "hasGrantedAccessibility"
+        private const val KEY_DISMISS_SERVICE_WARNING = "dismissServiceWarning"
     }
 }

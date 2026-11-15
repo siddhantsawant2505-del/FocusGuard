@@ -1,11 +1,14 @@
 package com.siddhant.focusguard
 
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -37,6 +40,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             FocusGuardTheme {
                 var serviceEnabled by remember { mutableStateOf(isAccessibilityServiceEnabled(this)) }
+                var hasGrantedAccessibility by remember { mutableStateOf(store.hasGrantedAccessibility) }
+                var dismissServiceWarning by remember { mutableStateOf(store.dismissServiceWarning) }
                 var budgetMinutes by remember { mutableStateOf(store.budgetMin) }
                 var cooldownMinutes by remember { mutableStateOf(store.cooldownMin) }
                 var usedMinutes by remember { mutableStateOf((store.usedMs / 60_000L).toInt()) }
@@ -55,6 +60,13 @@ class MainActivity : ComponentActivity() {
                     engine.refreshLockExpiration()
 
                     serviceEnabled = isAccessibilityServiceEnabled(this@MainActivity)
+                    if (serviceEnabled && !store.hasGrantedAccessibility) {
+                        store.hasGrantedAccessibility = true
+                        store.persist(immediate = true)
+                    }
+
+                    hasGrantedAccessibility = store.hasGrantedAccessibility
+                    dismissServiceWarning = store.dismissServiceWarning
                     budgetMinutes = store.budgetMin
                     cooldownMinutes = store.cooldownMin
                     usedMinutes = (store.usedMs / 60_000L).toInt()
@@ -94,6 +106,8 @@ class MainActivity : ComponentActivity() {
 
                 MainScreen(
                     serviceEnabled = serviceEnabled,
+                    hasGrantedAccessibility = hasGrantedAccessibility,
+                    dismissServiceWarning = dismissServiceWarning,
                     usedMinutes = usedMinutes,
                     budgetMinutes = budgetMinutes,
                     cooldownMinutes = cooldownMinutes,
@@ -141,6 +155,16 @@ class MainActivity : ComponentActivity() {
                         store.blockedDomains = store.blockedDomains - domain
                         store.persist(immediate = true)
                         refreshState()
+                    },
+                    onDismissWarning = {
+                        store.dismissServiceWarning = true
+                        store.persist(immediate = true)
+                        refreshState()
+                    },
+                    onResetWarningDismissal = {
+                        store.dismissServiceWarning = false
+                        store.persist(immediate = true)
+                        refreshState()
                     }
                 )
             }
@@ -172,17 +196,52 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-        val expectedServiceName = "${context.packageName}/${BlockerService::class.java.canonicalName}"
-        val enabledServices = Settings.Secure.getString(
+        // 1. Direct runtime check: if service instance is active in this process
+        if (BlockerService.isRunning) {
+            return true
+        }
+
+        // 2. Check via AccessibilityManager
+        val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
+        val enabledServices = am?.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+        if (enabledServices != null) {
+            for (service in enabledServices) {
+                val serviceInfo = service.resolveInfo?.serviceInfo ?: continue
+                if (serviceInfo.packageName.equals(context.packageName, ignoreCase = true) &&
+                    (serviceInfo.name.equals(BlockerService::class.java.name, ignoreCase = true) ||
+                     serviceInfo.name.endsWith("BlockerService", ignoreCase = true))
+                ) {
+                    return true
+                }
+            }
+        }
+
+        // 3. Check Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES with robust ComponentName parsing
+        val enabledServicesSetting = Settings.Secure.getString(
             context.contentResolver,
             Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
         ) ?: return false
 
+        val expectedComponent = ComponentName(context, BlockerService::class.java)
+        val expectedFullName = expectedComponent.flattenToString()
+        val expectedShortName = expectedComponent.flattenToShortString()
+
         val colonSplitter = TextUtils.SimpleStringSplitter(':')
-        colonSplitter.setString(enabledServices)
+        colonSplitter.setString(enabledServicesSetting)
         while (colonSplitter.hasNext()) {
-            val componentName = colonSplitter.next()
-            if (componentName.equals(expectedServiceName, ignoreCase = true)) {
+            val componentString = colonSplitter.next()
+            if (componentString.equals(expectedFullName, ignoreCase = true) ||
+                componentString.equals(expectedShortName, ignoreCase = true)
+            ) {
+                return true
+            }
+
+            val unflattened = ComponentName.unflattenFromString(componentString)
+            if (unflattened != null &&
+                unflattened.packageName.equals(context.packageName, ignoreCase = true) &&
+                (unflattened.className.equals(BlockerService::class.java.name, ignoreCase = true) ||
+                 unflattened.className.endsWith("BlockerService", ignoreCase = true))
+            ) {
                 return true
             }
         }

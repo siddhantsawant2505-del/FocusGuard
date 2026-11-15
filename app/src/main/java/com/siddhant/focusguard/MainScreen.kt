@@ -52,6 +52,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -104,6 +105,8 @@ private enum class AppFilter {
 @Composable
 fun MainScreen(
     serviceEnabled: Boolean,
+    hasGrantedAccessibility: Boolean = false,
+    dismissServiceWarning: Boolean = false,
     usedMinutes: Int,
     budgetMinutes: Int,
     cooldownMinutes: Int,
@@ -121,7 +124,9 @@ fun MainScreen(
     onToggleApp: (String) -> Unit,
     onToggleShortsOnly: (Boolean) -> Unit,
     onAddDomain: (String) -> Unit,
-    onRemoveDomain: (String) -> Unit
+    onRemoveDomain: (String) -> Unit,
+    onDismissWarning: () -> Unit = {},
+    onResetWarningDismissal: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(NavTab.APPS) }
@@ -174,6 +179,7 @@ fun MainScreen(
                 actions = {
                     ServiceStatusBadge(
                         serviceEnabled = serviceEnabled,
+                        hasGrantedAccessibility = hasGrantedAccessibility,
                         onClick = { openAccessibilitySettings(context) }
                     )
                 },
@@ -190,6 +196,8 @@ fun MainScreen(
         ) {
             FocusDashboardHero(
                 serviceEnabled = serviceEnabled,
+                hasGrantedAccessibility = hasGrantedAccessibility,
+                dismissServiceWarning = dismissServiceWarning,
                 usedMinutes = usedMinutes,
                 budgetMinutes = budgetMinutes,
                 cooldownMinutes = cooldownMinutes,
@@ -198,7 +206,8 @@ fun MainScreen(
                 pendingDesc = pendingDesc,
                 pendingRemainingMs = pendingChangeRemainingMs,
                 protectedAppsCount = blockedApps.size,
-                onOpenAccessibility = { openAccessibilitySettings(context) }
+                onOpenAccessibility = { openAccessibilitySettings(context) },
+                onDismissWarning = onDismissWarning
             )
 
             PillTabBar(
@@ -247,7 +256,10 @@ fun MainScreen(
                     )
                     NavTab.GUIDE -> GuideTabContent(
                         serviceEnabled = serviceEnabled,
-                        onOpenAccessibility = { openAccessibilitySettings(context) }
+                        hasGrantedAccessibility = hasGrantedAccessibility,
+                        dismissServiceWarning = dismissServiceWarning,
+                        onOpenAccessibility = { openAccessibilitySettings(context) },
+                        onResetWarningDismissal = onResetWarningDismissal
                     )
                 }
             }
@@ -283,21 +295,29 @@ private fun ShieldGlyph(
 @Composable
 private fun ServiceStatusBadge(
     serviceEnabled: Boolean,
+    hasGrantedAccessibility: Boolean = false,
     onClick: () -> Unit
 ) {
-    val bgColor by animateColorAsState(
-        targetValue = if (serviceEnabled) {
-            FocusEmerald.copy(alpha = 0.15f)
-        } else {
-            FocusCoral.copy(alpha = 0.15f)
-        },
-        label = "BadgeBgColor"
-    )
+    val targetBgColor = when {
+        serviceEnabled -> FocusEmerald.copy(alpha = 0.15f)
+        hasGrantedAccessibility -> FocusAmber.copy(alpha = 0.15f)
+        else -> FocusCoral.copy(alpha = 0.15f)
+    }
 
-    val contentColor by animateColorAsState(
-        targetValue = if (serviceEnabled) FocusEmerald else FocusCoral,
-        label = "BadgeContentColor"
-    )
+    val targetContentColor = when {
+        serviceEnabled -> FocusEmerald
+        hasGrantedAccessibility -> FocusAmber
+        else -> FocusCoral
+    }
+
+    val bgColor by animateColorAsState(targetValue = targetBgColor, label = "BadgeBgColor")
+    val contentColor by animateColorAsState(targetValue = targetContentColor, label = "BadgeContentColor")
+
+    val badgeText = when {
+        serviceEnabled -> stringResource(R.string.service_on)
+        hasGrantedAccessibility -> stringResource(R.string.service_paused)
+        else -> stringResource(R.string.service_off)
+    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -321,7 +341,7 @@ private fun ServiceStatusBadge(
                 .background(contentColor)
         )
         Text(
-            text = if (serviceEnabled) stringResource(R.string.service_on) else stringResource(R.string.service_off),
+            text = badgeText,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
             color = contentColor
@@ -332,6 +352,8 @@ private fun ServiceStatusBadge(
 @Composable
 private fun FocusDashboardHero(
     serviceEnabled: Boolean,
+    hasGrantedAccessibility: Boolean = false,
+    dismissServiceWarning: Boolean = false,
     usedMinutes: Int,
     budgetMinutes: Int,
     cooldownMinutes: Int,
@@ -340,7 +362,8 @@ private fun FocusDashboardHero(
     pendingDesc: String?,
     pendingRemainingMs: Long,
     protectedAppsCount: Int,
-    onOpenAccessibility: () -> Unit
+    onOpenAccessibility: () -> Unit,
+    onDismissWarning: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -489,29 +512,56 @@ private fun FocusDashboardHero(
             }
 
             // Lockout or Service Warning Banner
-            if (!serviceEnabled) {
+            if (!serviceEnabled && !dismissServiceWarning) {
+                val bannerColor = if (hasGrantedAccessibility) FocusAmber else FocusCoral
+                val bannerText = if (hasGrantedAccessibility) {
+                    stringResource(R.string.service_paused_banner)
+                } else {
+                    stringResource(R.string.service_off)
+                }
+                val actionText = if (hasGrantedAccessibility) "RECONNECT ↗" else "FIX ↗"
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(FocusCoral.copy(alpha = 0.12f))
+                        .background(bannerColor.copy(alpha = 0.12f))
                         .clickable(onClick = onOpenAccessibility)
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = stringResource(R.string.service_off),
+                        text = bannerText,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = FocusCoral
+                        color = bannerColor,
+                        modifier = Modifier.weight(1f)
                     )
-                    Text(
-                        text = "FIX ↗",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = FocusCoral
-                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = actionText,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = bannerColor
+                        )
+                        if (hasGrantedAccessibility) {
+                            Text(
+                                text = "✕",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = bannerColor.copy(alpha = 0.7f),
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .clickable { onDismissWarning() }
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
             } else if (isLocked) {
                 val totalSec = (remainingLockMs / 1000L).coerceAtLeast(0L)
@@ -1425,7 +1475,10 @@ private fun InsightsTabContent(
 @Composable
 private fun GuideTabContent(
     serviceEnabled: Boolean,
-    onOpenAccessibility: () -> Unit
+    hasGrantedAccessibility: Boolean = false,
+    dismissServiceWarning: Boolean = false,
+    onOpenAccessibility: () -> Unit,
+    onResetWarningDismissal: () -> Unit = {}
 ) {
     var expandedItem by remember { mutableIntStateOf(-1) }
 
@@ -1453,7 +1506,7 @@ private fun GuideTabContent(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    // Accessibility Status Item
+                    // Accessibility Permission State (Remembered)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1465,31 +1518,95 @@ private fun GuideTabContent(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Accessibility Service",
+                                text = "Accessibility Permission",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = if (serviceEnabled) "Shield is active and protecting your focus" else "Required to detect distracting apps",
+                                text = if (hasGrantedAccessibility) {
+                                    stringResource(R.string.permission_remembered)
+                                } else {
+                                    stringResource(R.string.permission_not_granted)
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
-                        if (!serviceEnabled) {
+                        if (hasGrantedAccessibility) {
+                            Text(
+                                text = "REMEMBERED ✓",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = FocusEmerald
+                            )
+                        } else {
                             Button(
                                 onClick = onOpenAccessibility,
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                             ) {
-                                Text("Enable")
+                                Text("Grant")
                             }
-                        } else {
+                        }
+                    }
+
+                    // Background Engine Status Item
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Shield Engine Status",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = if (serviceEnabled) {
+                                    stringResource(R.string.engine_active)
+                                } else {
+                                    stringResource(R.string.engine_inactive)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        if (serviceEnabled) {
                             Text(
                                 text = "ACTIVE ✓",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = FocusEmerald
+                            )
+                        } else {
+                            Button(
+                                onClick = onOpenAccessibility,
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (hasGrantedAccessibility) FocusAmber else MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Text(if (hasGrantedAccessibility) "Reconnect" else "Enable")
+                            }
+                        }
+                    }
+
+                    if (dismissServiceWarning) {
+                        TextButton(
+                            onClick = onResetWarningDismissal,
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.reset_alerts),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }

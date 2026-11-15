@@ -5,6 +5,13 @@
     <string name="unlocks_in">Unlocks in %s</string>
     <string name="service_on">Shield Active</string>
     <string name="service_off">Service Disabled • Tap to Setup</string>
+    <string name="service_paused">Permission Saved • Reconnect</string>
+    <string name="service_paused_banner">Permissions remembered. Background engine paused by OS.</string>
+    <string name="permission_remembered">Permission Granted &amp; Remembered</string>
+    <string name="permission_not_granted">Required to detect distracting apps</string>
+    <string name="engine_active">Shield is active and protecting your focus</string>
+    <string name="engine_inactive">Background engine paused by OS • Tap to reconnect</string>
+    <string name="reset_alerts">Restore dismissed service banners</string>
     <string name="used_ratio">%1$d of %2$d min used</string>
     <string name="locked_until">Cooldown Active • Unlocks in %s</string>
     <string name="pending_change">Change takes effect in %s</string>
